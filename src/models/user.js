@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema(
   {
@@ -7,10 +9,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      min: [3, "First name must be at least 3 characters long"],
     },
     lastName: {
       type: String,
       trim: true,
+      min: [3, "Last name must be at least 3 characters long"],
     },
 
     email: {
@@ -19,26 +23,22 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      validate(value){
-        if(!validator.isEmail(value)){
+      validate(value) {
+        if (!validator.isEmail(value)) {
           throw new Error("Invalid email address");
         }
-      }
+      },
+      index: true,
     },
 
     password: {
       type: String,
       required: true,
-      validate(value){
-        if(!validator.isStrongPassword(value)){
-          throw new Error("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one symbol");
-        }
-      }
     },
 
     role: {
       type: String,
-      enum: ["student", "admin"],
+      enum: ["student", "admin", "educator"],
       default: "student",
     },
 
@@ -47,7 +47,22 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+
+userSchema.methods.validatePassword = async function (passwordInputByUser) {
+  const isPasswordCorrect = await bcrypt.compare(
+    passwordInputByUser,
+    this.password,
+  );
+  return isPasswordCorrect;
+};
+
+userSchema.methods.getJWT = async function () {
+  const token = await jwt.sign({ _id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: "24h",
+  });
+  return token;
+};
 
 module.exports = mongoose.model("User", userSchema);
