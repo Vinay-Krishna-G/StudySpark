@@ -59,8 +59,10 @@ authRouter.post("/login", async (req, res) => {
       }
     }
   } catch (err) {
-    res.status(400).send("Error: " + err.message);
+    res.status(500).send("Error: " + err.message);
   }
 });
 
 module.exports = authRouter;
+
+

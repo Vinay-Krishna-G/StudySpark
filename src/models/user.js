@@ -9,12 +9,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      min: [3, "First name must be at least 3 characters long"],
+      minlength: 3,
     },
     lastName: {
       type: String,
       trim: true,
-      min: [3, "Last name must be at least 3 characters long"],
+      minlength: 3,
     },
 
     email: {
@@ -34,15 +34,21 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+      select: false
     },
 
     role: {
       type: String,
-      enum: ["student", "admin", "educator"],
+      enum: ["student", "admin", "instructor"],
       default: "student",
     },
 
     adBlockDetected: {
+      type: Boolean,
+      default: false,
+    },
+
+    isBlocked: {
       type: Boolean,
       default: false,
     },
@@ -59,7 +65,7 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
 };
 
 userSchema.methods.getJWT = async function () {
-  const token = await jwt.sign({ _id: this._id }, process.env.JWT_SECRET, {
+  const token = await jwt.sign({ _id: this._id, role: this.role }, process.env.JWT_SECRET, {
     expiresIn: "24h",
   });
   return token;
