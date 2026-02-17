@@ -64,11 +64,10 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
   return isPasswordCorrect;
 };
 
-userSchema.methods.getJWT = async function () {
-  const token = await jwt.sign({ _id: this._id, role: this.role }, process.env.JWT_SECRET, {
+userSchema.methods.getJWT =  function () {
+  return jwt.sign({ _id: this._id, role: this.role }, process.env.JWT_SECRET, {
     expiresIn: "24h",
   });
-  return token;
 };
 
 module.exports = mongoose.model("User", userSchema);

@@ -5,64 +5,89 @@ const User = require("../models/user");
 
 const authRouter = express.Router();
 
+/**
+ * SIGNUP
+ */
 authRouter.post("/signup", async (req, res) => {
   try {
     validateSignUpData(req);
 
     const { firstName, lastName, email, password } = req.body;
 
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = new User({
+    await User.create({
       firstName,
       lastName,
-      email,
+      email: email.toLowerCase(),
       password: passwordHash,
     });
 
-    await user.save();
-    res.status(201).send("User created Successfully !!");
+    res.status(201).json({
+      message: "User created successfully",
+    });
+
   } catch (err) {
-    res.status(400).send("Error: " + err.message);
+    res.status(400).json({
+      error: err.message,
+    });
   }
 });
 
+/**
+ * LOGIN
+ */
 authRouter.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    const user = await User.findOne({ email: email });
+    const { email, password } = req.body;
+
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+    }).select("+password");
+
     if (!user) {
-      throw new Error("Invalid credentials");
-    } else {
-      const isPasswordCorrect = await user.validatePassword(password);
-
-      if (!isPasswordCorrect) {
-        throw new Error("Invalid Credentials!!");
-      } else {
-        const token = await user.getJWT();
-        console.log(token);
-
-        res.cookie("token", token, {
-          httpOnly: true,
-          expires: new Date(Date.now() + 24 * 3600000),
-        });
-        res.status(200).json({
-          message: "Login Successful !!",
-          user: {
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role
-          }
-        });
-      }
+      return res.status(401).json({
+        error: "Invalid email or password",
+      });
     }
+
+    const isPasswordCorrect = await user.validatePassword(password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        error: "Invalid email or password",
+      });
+    }
+
+    const token =  user.getJWT();
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      // sameSite: "strict",
+      secure: false, // set true in production (HTTPS)
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+
   } catch (err) {
-    res.status(500).send("Error: " + err.message);
+    res.status(500).json({
+      error: "Server error",
+    });
   }
 });
 
 module.exports = authRouter;
-
-
