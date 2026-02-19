@@ -31,7 +31,6 @@ authRouter.post("/signup", async (req, res) => {
     res.status(201).json({
       message: "User created successfully",
     });
-
   } catch (err) {
     res.status(400).json({
       error: err.message,
@@ -64,7 +63,7 @@ authRouter.post("/login", async (req, res) => {
       });
     }
 
-    const token =  user.getJWT();
+    const token = user.getJWT();
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -82,12 +81,18 @@ authRouter.post("/login", async (req, res) => {
         role: user.role,
       },
     });
-
   } catch (err) {
     res.status(500).json({
       error: "Server error",
     });
   }
+});
+/**
+ * LOGOUT
+ */
+authRouter.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out successfully" });
 });
 
 module.exports = authRouter;

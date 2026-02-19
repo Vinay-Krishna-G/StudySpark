@@ -34,6 +34,19 @@ router.post(
   allowRoles("student"),
   async (req, res) => {
     try {
+      // 🔒 Prevent multiple active attempts
+      const existingAttempt = await TestAttempt.findOne({
+        user: req.user._id,
+        test: req.params.testId,
+        status: "started",
+      });
+
+      if (existingAttempt) {
+        return res.status(400).json({
+          error: "You already have an active attempt for this test",
+        });
+      }
+
       const test = await Test.findById(req.params.testId).populate({
         path: "questions",
         select: "questionText options marks negativeMarks",
@@ -43,6 +56,7 @@ router.post(
         return res.status(404).json({ error: "Test not found" });
       }
 
+      // ✅ correct creation
       const attempt = await TestAttempt.create({
         user: req.user._id,
         test: test._id,
@@ -73,7 +87,7 @@ router.post(
       const attempt = await TestAttempt.findOne({
         _id: req.params.attemptId,
         user: req.user._id,
-      });
+      }).populate("test", "duration");
 
       if (!attempt) {
         return res.status(404).json({ error: "Attempt not found" });
@@ -81,6 +95,21 @@ router.post(
 
       if (attempt.status === "submitted") {
         return res.status(400).json({ error: "Test already submitted" });
+      }
+
+      // ⏱ Timer validation AFTER attempt check
+      const expiry =
+        new Date(attempt.startTime).getTime() +
+        attempt.test.duration * 60 * 1000;
+
+      if (Date.now() > expiry) {
+        attempt.status = "expired";
+        attempt.endTime = new Date();
+        await attempt.save();
+
+        return res.status(400).json({
+          error: "Time expired. Attempt closed.",
+        });
       }
 
       let score = 0;

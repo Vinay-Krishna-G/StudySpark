@@ -28,11 +28,20 @@ const testAttemptSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["started", "submitted"],
+      enum: ["started", "submitted", "expired"], // ✅ fixed
       default: "started",
+    },
+    startTime: {
+      type: Date,
+      default: Date.now,
+    },
+    endTime: {
+      type: Date,
     },
   },
   { timestamps: true },
 );
+
+testAttemptSchema.index({ user: 1, test: 1, status: 1 });
 
 module.exports = mongoose.model("TestAttempt", testAttemptSchema);
