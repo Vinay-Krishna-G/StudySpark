@@ -123,7 +123,9 @@ router.post(
       });
 
       // link to test
-      test.questions.push(question._id);
+      if (!test.questions.includes(question._id)) {
+        test.questions.push(question._id);
+      }
       test.totalMarks += marks || 1;
 
       await test.save();

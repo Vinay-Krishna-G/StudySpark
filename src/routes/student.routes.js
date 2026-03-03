@@ -114,10 +114,23 @@ router.post(
 
       let score = 0;
 
+      // 1️⃣ Collect all question IDs
+      const questionIds = answers.map((a) => a.question);
+
+      // 2️⃣ Fetch all questions in ONE DB call
+      const questions = await Question.find({
+        _id: { $in: questionIds },
+      }).select("+correctOption marks negativeMarks");
+
+      // 3️⃣ Create quick lookup map
+      const questionMap = {};
+      questions.forEach((q) => {
+        questionMap[q._id.toString()] = q;
+      });
+
+      // 4️⃣ Calculate score without extra DB calls
       for (let ans of answers) {
-        const question = await Question.findById(ans.question).select(
-          "+correctOption marks negativeMarks",
-        );
+        const question = questionMap[ans.question];
 
         if (!question) continue;
 

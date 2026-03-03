@@ -37,4 +37,6 @@ const testSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+testSchema.index({ createdBy: 1 });
+
 module.exports = mongoose.model("Test", testSchema);

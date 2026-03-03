@@ -10,6 +10,14 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== "text/csv") {
+      return cb(new Error("Only CSV files allowed"));
+    }
+    cb(null, true);
+  }
+});
 
 module.exports = upload;

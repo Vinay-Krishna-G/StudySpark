@@ -7,11 +7,13 @@ const authRouter = require("./routes/auth.routes");
 const studentRoutes = require("./routes/student.routes");
 const instructorRoutes = require("./routes/instructor.routes");
 const adminRoutes = require("./routes/admin.routes");
+const helmet = require("helmet");
 
 const rateLimit = require("express-rate-limit");
 
 const app = express();
 
+app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
