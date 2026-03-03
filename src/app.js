@@ -8,6 +8,7 @@ const studentRoutes = require("./routes/student.routes");
 const instructorRoutes = require("./routes/instructor.routes");
 const adminRoutes = require("./routes/admin.routes");
 const helmet = require("helmet");
+const resourceRoutes = require("./routes/resource.routes");
 
 const rateLimit = require("express-rate-limit");
 
@@ -29,6 +30,7 @@ app.use("/", authRouter);
 app.use("/student", studentRoutes);
 app.use("/instructor", instructorRoutes);
 app.use("/admin", adminRoutes);
+app.use("/resources", resourceRoutes);
 
 const PORT = process.env.PORT || 9000;
 
