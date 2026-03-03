@@ -255,4 +255,50 @@ router.delete(
   },
 );
 
+/**
+ * GET /instructor/questions
+ * Filter questions from question bank
+ */
+router.get(
+  "/questions",
+  auth,
+  allowRoles("instructor", "admin"),
+  async (req, res) => {
+    try {
+      const {
+        subject,
+        chapter,
+        topic,
+        difficulty,
+        isPYQ,
+        importance,
+      } = req.query;
+
+      const filter = {
+        createdBy: req.user._id, // only show instructor's questions
+      };
+
+      if (subject) filter.subject = subject;
+      if (chapter) filter.chapter = chapter;
+      if (topic) filter.topic = topic;
+      if (difficulty) filter.difficulty = difficulty;
+      if (importance) filter.importance = importance;
+      if (isPYQ !== undefined) filter.isPYQ = isPYQ === "true";
+
+      const questions = await Question.find(filter).select(
+        "-correctOption -explanation",
+      );
+
+      res.json({
+        count: questions.length,
+        questions,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: "Failed to fetch questions",
+      });
+    }
+  },
+);
+
 module.exports = router;
