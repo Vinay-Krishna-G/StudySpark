@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const connectDb = require("./config/database");
+const cors = require("cors");
 
 const authRouter = require("./routes/auth.routes");
 const studentRoutes = require("./routes/student.routes");
@@ -17,6 +18,13 @@ const app = express();
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(
+  cors({
+    origin:process.env.FRONTEND_URL,
+    credentials: true, 
+  })
+);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
