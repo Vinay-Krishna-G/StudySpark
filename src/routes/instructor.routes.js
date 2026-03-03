@@ -53,7 +53,7 @@ router.post(
     } catch (err) {
       res.status(500).json({ error: "Failed to create test" });
     }
-  }
+  },
 );
 
 /**
@@ -94,6 +94,12 @@ router.post(
       if (test.createdBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({
           error: "You are not allowed to modify this test",
+        });
+      }
+
+      if (!questionText || !options || !correctOption || !subject) {
+        return res.status(400).json({
+          error: "Required fields missing",
         });
       }
 
@@ -360,7 +366,7 @@ router.get(
         error: "Failed to fetch questions",
       });
     }
-  }
+  },
 );
 
 /**
@@ -417,7 +423,7 @@ router.post(
 
       const addedMarks = availableQuestions.reduce(
         (sum, q) => sum + (q.marks || 1),
-        0
+        0,
       );
 
       test.totalMarks += addedMarks;
@@ -427,8 +433,7 @@ router.post(
       res.json({
         message: "Test generated successfully",
         addedQuestions: availableQuestions.length,
-        remainingPool:
-          "Unique questions only were added",
+        remainingPool: "Unique questions only were added",
       });
     } catch (err) {
       res.status(500).json({
@@ -436,7 +441,7 @@ router.post(
         details: err.message,
       });
     }
-  }
+  },
 );
 
 /**
@@ -497,7 +502,7 @@ router.put(
         details: err.message,
       });
     }
-  }
+  },
 );
 
 /**
@@ -526,7 +531,7 @@ router.delete(
       // Remove question from all tests
       await Test.updateMany(
         { questions: question._id },
-        { $pull: { questions: question._id } }
+        { $pull: { questions: question._id } },
       );
 
       // Delete question
@@ -541,7 +546,7 @@ router.delete(
         details: err.message,
       });
     }
-  }
+  },
 );
 
 module.exports = router;

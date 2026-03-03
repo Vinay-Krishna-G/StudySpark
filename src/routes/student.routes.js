@@ -126,12 +126,6 @@ router.post(
         } else {
           score -= question.negativeMarks;
         }
-
-        console.log("Correct Option:", question.correctOption);
-        console.log("Selected Option:", ans.selectedOption);
-        console.log("Marks:", question.marks);
-        console.log("Negative:", question.negativeMarks);
-        console.log("------");
       }
 
       attempt.answers = answers;
