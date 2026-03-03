@@ -34,7 +34,7 @@ router.post(
 
       res.status(201).json(test);
     } catch (err) {
-      res.status(500).json({ error: "Failed to create test" });
+      res.status(500).json({ error: "Failed to create test" + err.message });
     }
   },
 );
@@ -110,7 +110,9 @@ router.post(
         questionId: question._id,
       });
     } catch (err) {
-      res.status(500).json({ error: "Failed to add question", err: err.message });
+      res
+        .status(500)
+        .json({ error: "Failed to add question", err: err.message });
     }
   },
 );
@@ -119,6 +121,7 @@ router.post(
  * POST /instructor/quizzes/:testId/upload-csv
  * Bulk upload questions
  */
+
 router.post(
   "/quizzes/:testId/upload-csv",
   auth,
@@ -147,35 +150,58 @@ router.post(
         .on("data", (data) => results.push(data))
         .on("end", async () => {
           try {
-            const questionsToInsert = results.map((row) => ({
-              questionText: row.questionText,
+            const cleanKey = (key) => key.replace(/"/g, "").trim();
 
-              options: {
-                A: row.optionA,
-                B: row.optionB,
-                C: row.optionC,
-                D: row.optionD,
-              },
+            const questionsToInsert = results
+              .map((row) => {
+                const cleanedRow = {};
+                Object.keys(row).forEach((key) => {
+                  cleanedRow[cleanKey(key)] = row[key];
+                });
 
-              correctOption: row.correctOption,
-              explanation: row.explanation,
+                if (!cleanedRow.questionText) return null;
 
-              marks: Number(row.marks) || 1,
-              negativeMarks: Number(row.negativeMarks) || 0,
+                return {
+                  questionText: cleanedRow.questionText?.trim(),
 
-              subject: row.subject,
-              chapter: row.chapter,
-              topic: row.topic,
+                  options: {
+                    A: cleanedRow.optionA?.trim(),
+                    B: cleanedRow.optionB?.trim(),
+                    C: cleanedRow.optionC?.trim(),
+                    D: cleanedRow.optionD?.trim(),
+                  },
 
-              difficulty: row.difficulty || "medium",
+                  correctOption: cleanedRow.correctOption?.trim(),
+                  explanation: cleanedRow.explanation?.trim(),
 
-              examYear: row.examYear ? Number(row.examYear) : undefined,
-              isPYQ: row.isPYQ === "true",
-              isRepeated: row.isRepeated === "true",
-              importance: row.importance || "medium",
+                  marks: Number(cleanedRow.marks) || 1,
+                  negativeMarks: Number(cleanedRow.negativeMarks) || 0,
 
-              createdBy: req.user._id,
-            }));
+                  subject: cleanedRow.subject?.trim(),
+                  chapter: cleanedRow.chapter?.trim(),
+                  topic: cleanedRow.topic?.trim(),
+
+                  difficulty: cleanedRow.difficulty?.trim() || "medium",
+
+                  examYear: cleanedRow.examYear
+                    ? Number(cleanedRow.examYear)
+                    : undefined,
+
+                  isPYQ: cleanedRow.isPYQ === "true",
+                  isRepeated: cleanedRow.isRepeated === "true",
+
+                  importance: cleanedRow.importance?.trim() || "medium",
+
+                  createdBy: req.user._id,
+                };
+              })
+              .filter(Boolean);
+
+            if (!questionsToInsert.length) {
+              return res.status(400).json({
+                error: "No valid questions found in CSV",
+              });
+            }
 
             const insertedQuestions =
               await Question.insertMany(questionsToInsert);
@@ -198,11 +224,17 @@ router.post(
               count: insertedQuestions.length,
             });
           } catch (err) {
-            res.status(500).json({ error: "Insert failed", err: err.message });
+            res.status(500).json({
+              error: "Insert failed",
+              err: err.message,
+            });
           }
         });
     } catch (err) {
-      res.status(500).json({ error: "Upload failed", err: err.message });
+      res.status(500).json({
+        error: "Upload failed",
+        err: err.message,
+      });
     }
   },
 );
@@ -265,14 +297,8 @@ router.get(
   allowRoles("instructor", "admin"),
   async (req, res) => {
     try {
-      const {
-        subject,
-        chapter,
-        topic,
-        difficulty,
-        isPYQ,
-        importance,
-      } = req.query;
+      const { subject, chapter, topic, difficulty, isPYQ, importance } =
+        req.query;
 
       const filter = {
         createdBy: req.user._id, // only show instructor's questions
@@ -299,6 +325,72 @@ router.get(
       });
     }
   },
+);
+
+/**
+ * POST /instructor/quizzes/:testId/generate
+ * Auto-generate test from question bank
+ */
+router.post(
+  "/quizzes/:testId/generate",
+  auth,
+  allowRoles("instructor", "admin"),
+  async (req, res) => {
+    try {
+      const { subject, chapter, difficulty, count } = req.body;
+
+      const test = await Test.findById(req.params.testId);
+
+      if (!test) {
+        return res.status(404).json({ error: "Test not found" });
+      }
+
+      if (test.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ error: "Unauthorized test" });
+      }
+
+      const filter = {
+        createdBy: req.user._id,
+      };
+
+      if (subject) filter.subject = subject;
+      if (chapter) filter.chapter = chapter;
+      if (difficulty) filter.difficulty = difficulty;
+
+      const questions = await Question.aggregate([
+        { $match: filter },
+        { $sample: { size: Number(count) || 5 } },
+      ]);
+
+      if (!questions.length) {
+        return res.status(400).json({
+          error: "Not enough questions available",
+        });
+      }
+
+      const ids = questions.map((q) => q._id);
+      test.questions.push(...ids);
+
+      const addedMarks = questions.reduce(
+        (sum, q) => sum + (q.marks || 1),
+        0
+      );
+
+      test.totalMarks += addedMarks;
+
+      await test.save();
+
+      res.json({
+        message: "Test generated successfully",
+        addedQuestions: questions.length,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: "Generation failed",
+        details: err.message,
+      });
+    }
+  }
 );
 
 module.exports = router;
