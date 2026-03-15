@@ -3,16 +3,20 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-/* Force dark theme globally */
+/* Base Document */
 body {
-  @apply bg-dark-900 text-slate-200 font-sans antialiased;
+  @apply bg-white text-gray-900 font-sans antialiased transition-colors duration-300;
   margin: 0;
   padding: 0;
 }
 
+.dark body {
+  @apply bg-dark-900 text-slate-200;
+}
+
 /* Base Headings */
 h1, h2, h3, h4, h5, h6 {
-  @apply text-white font-bold tracking-tight;
+  @apply text-gray-900 dark:text-white font-bold tracking-tight;
 }
 
 /* Custom scrollbar */
@@ -36,4 +40,18 @@ h1, h2, h3, h4, h5, h6 {
 /* Selection */
 ::selection {
   @apply bg-primary-500/30 text-primary-200;
+}
+
+@layer components {
+  .section-padding {
+    @apply py-20 px-6 sm:px-10 lg:px-14;
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-white px-8 py-4 rounded-xl font-bold tracking-wide hover:bg-accent/90 transition-all shadow-lg shadow-accent/20 hover:shadow-accent/40 active:scale-[0.98];
+  }
+  
+  .btn-secondary {
+    @apply bg-white/5 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:border-accent hover:bg-accent/5 px-8 py-4 rounded-xl font-bold tracking-wide transition-all active:scale-[0.98];
+  }
 }
